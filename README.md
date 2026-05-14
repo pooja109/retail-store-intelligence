@@ -22,12 +22,13 @@ graph LR
     CPS --> SA[Sales Data Agent]
     CPS --> LA[Labor Data Agent]
     CPS --> IA[Inventory Data Agent]
-    SA --> SQL[(SQL Views)]
-    SA --> LH[(Lakehouse Tables)]
-    LA --> SQL
+    SA --> LH
     LA --> LH
-    IA --> SQL
     IA --> LH
+    subgraph LH[Lakehouse]
+        Tables[(Tables)]
+        Views[(SQL Views)]
+    end
 ```
 
 - No-code orchestrator configured via system prompt and topic definitions
@@ -44,12 +45,13 @@ graph LR
     FA --> SA[Sales Data Agent]
     FA --> LA[Labor Data Agent]
     FA --> IA[Inventory Data Agent]
-    SA --> SQL[(SQL Views)]
-    SA --> LH[(Lakehouse Tables)]
-    LA --> SQL
+    SA --> LH
     LA --> LH
-    IA --> SQL
     IA --> LH
+    subgraph LH[Lakehouse]
+        Tables[(Tables)]
+        Views[(SQL Views)]
+    end
 ```
 
 - Python-based orchestrator hosted on Azure AI Foundry
@@ -66,12 +68,13 @@ graph LR
     FA --> SG[Sales Genie Agent]
     FA --> LG[Labor Genie Agent]
     FA --> IG[Inventory Genie Agent]
-    SG --> SQL[(SQL Views)]
-    SG --> LH[(Lakehouse Tables)]
-    LG --> SQL
+    SG --> LH
     LG --> LH
-    IG --> SQL
     IG --> LH
+    subgraph LH[Lakehouse]
+        Tables[(Tables)]
+        Views[(SQL Views)]
+    end
 ```
 
 - Python-based orchestrator hosted on Azure AI Foundry
