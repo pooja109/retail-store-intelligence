@@ -1,6 +1,14 @@
 # Store Intelligence — Setup Guide
 
-Step-by-step instructions to deploy the solution in Microsoft Fabric + Copilot Studio.
+Step-by-step instructions to deploy the solution. This repo contains three implementation options:
+
+| Option | Orchestrator | Backend Agents | Setup Guide |
+|--------|---|---|---|
+| 1 | Copilot Studio | Fabric Data Agents | This file (Phases 1–4 below) |
+| 2 | Azure AI Foundry | Fabric Data Agents | [foundry_agent/SETUP_GUIDE_FOUNDRY.md](foundry_agent/SETUP_GUIDE_FOUNDRY.md) |
+| 3 | Azure AI Foundry | Databricks Genie Agents | [databricks_genie/SETUP_GUIDE_DATABRICKS.md](databricks_genie/SETUP_GUIDE_DATABRICKS.md) |
+
+> **Options 2 & 3** share Phases 1–2 with Option 1 (Lakehouse views + Fabric Data Agents), then diverge. See their respective guides for the orchestrator setup.
 
 ---
 
@@ -62,18 +70,18 @@ In the agent configuration:
 
 1. In the agent config, find the **Instructions** section
 2. Copy the contents from the corresponding instructions file:
-   - Sales: [`agents/sales_agent/instructions.md`](agents/sales_agent/instructions.md)
-   - Inventory: [`agents/inventory_agent/instructions.md`](agents/inventory_agent/instructions.md)
-   - Labor: [`agents/labor_agent/instructions.md`](agents/labor_agent/instructions.md)
+   - Sales: [`dataagents/sales_agent/instructions.md`](dataagents/sales_agent/instructions.md)
+   - Inventory: [`dataagents/inventory_agent/instructions.md`](dataagents/inventory_agent/instructions.md)
+   - Labor: [`dataagents/labor_agent/instructions.md`](dataagents/labor_agent/instructions.md)
 3. Paste into the Instructions field
 
 ### 2.4 Add Example Queries
 
 1. In the agent config, find the **Examples** section
 2. Add Q&A pairs from the corresponding example queries file:
-   - Sales: [`agents/sales_agent/example_queries.sql`](agents/sales_agent/example_queries.sql)
-   - Inventory: [`agents/inventory_agent/example_queries.sql`](agents/inventory_agent/example_queries.sql)
-   - Labor: [`agents/labor_agent/example_queries.sql`](agents/labor_agent/example_queries.sql)
+   - Sales: [`dataagents/sales_agent/example_queries.sql`](dataagents/sales_agent/example_queries.sql)
+   - Inventory: [`dataagents/inventory_agent/example_queries.sql`](dataagents/inventory_agent/example_queries.sql)
+   - Labor: [`dataagents/labor_agent/example_queries.sql`](dataagents/labor_agent/example_queries.sql)
 3. For each example: paste the **question** (the comment) and the **SQL** (the query) as a Q&A pair
 
 ### 2.5 Test Each Agent
@@ -94,14 +102,15 @@ In the agent configuration:
 3. Name it **"Store Intelligence Assistant"**
 4. In the **Instructions** field, paste the system prompt from [`copilot_studio/orchestrator_instructions.md`](copilot_studio/orchestrator_instructions.md)
 
-### 3.2 Connect Fabric Data Agents as Actions
+### 3.2 Connect Fabric Data Agents
 
-For each of the 3 Fabric Data Agents:
+For each of the 3 Fabric Data Agents, add them as **connected agents**:
 
-1. In Copilot Studio, go to **Actions** → **Add an action**
+1. In Copilot Studio, go to **Agents** → **+ Add an agent**
 2. Select **Fabric Data Agent** connector
 3. Choose your Fabric workspace → select the published Data Agent
-4. Repeat for all 3 agents (Sales, Inventory, Labor)
+4. Set the relationship to **Connected** and trigger to **By agent**
+5. Repeat for all 3 agents (Sales, Inventory, Labor)
 
 ### 3.3 Configure Topics (Optional but Recommended)
 
@@ -176,28 +185,40 @@ For each topic:
 ## Folder Structure
 
 ```
-StoreIntelligence/
-├── sql/views/
-│   ├── vw_sales_summary.sql          # Phase 1
+retail-store-intelligence/
+├── sql/views/                          # Phase 1 — Lakehouse SQL views
+│   ├── vw_sales_summary.sql
 │   ├── vw_inventory_health.sql
 │   ├── vw_osa_daily.sql
 │   ├── vw_labor_coverage.sql
-│   └── vw_oos_classification.sql     # Depends on vw_osa_daily + vw_sales_summary
-├── agents/
+│   └── vw_oos_classification.sql
+├── dataagents/                         # Phase 2 — Fabric Data Agent configs
 │   ├── sales_agent/
-│   │   ├── instructions.md            # Phase 2 — agent system prompts
-│   │   └── example_queries.sql        # Phase 2 — example Q&A pairs
+│   │   ├── instructions.md
+│   │   └── example_queries.sql
 │   ├── inventory_agent/
 │   │   ├── instructions.md
 │   │   └── example_queries.sql
 │   └── labor_agent/
 │       ├── instructions.md
 │       └── example_queries.sql
-├── copilot_studio/
-│   ├── orchestrator_instructions.md   # Phase 3 — Copilot Studio config
+├── copilot_studio/                     # Option 1 — Copilot Studio orchestrator
+│   ├── orchestrator_instructions.md
 │   └── topics/
 │       ├── store_health_check.md
 │       ├── morning_briefing.md
 │       └── risk_summary.md
-└── SETUP_GUIDE.md                     # This file
+├── foundry_agent/                      # Option 2 — Foundry + Fabric Data Agents
+│   ├── app.py
+│   ├── tools.py
+│   ├── config.py
+│   ├── requirements.txt
+│   └── SETUP_GUIDE_FOUNDRY.md
+├── databricks_genie/                   # Option 3 — Foundry + Databricks Genie
+│   ├── foundry_agent/
+│   ├── genie_spaces/
+│   ├── sql/views/
+│   └── SETUP_GUIDE_DATABRICKS.md
+├── SETUP_GUIDE.md                      # This file
+└── README.md
 ```
