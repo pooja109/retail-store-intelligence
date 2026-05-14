@@ -25,17 +25,23 @@ graph LR
     SA --> LH
     LA --> LH
     IA --> LH
-    subgraph LH[Lakehouse]
-        Tables[(Tables)]
-        Views[(SQL Views)]
+    subgraph Fabric
+        SA
+        LA
+        IA
+        subgraph LH[Lakehouse]
+            Tables[(Tables)]
+            Views[(SQL Views)]
+        end
     end
+    style Fabric fill:#d4edda,stroke:#28a745
 ```
 
 - No-code orchestrator configured via system prompt and topic definitions
 - Routes questions to the appropriate Fabric Data Agent based on domain (sales, inventory, labor)
+- Fabric Data Agents are added as connected agents in Copilot Studio 
 - Supports multi-agent fan-out for cross-domain queries (e.g. "morning briefing", "store health check")
 - Built-in topic templates: morning briefing, risk summary, store health check
-- Fabric Data Agents are called as Copilot Studio actions
 
 ### Option 2: Foundry Agent + Fabric Data Agents
 
@@ -48,14 +54,17 @@ graph LR
     SA --> LH
     LA --> LH
     IA --> LH
-    subgraph LH[Lakehouse]
-        Tables[(Tables)]
-        Views[(SQL Views)]
+    subgraph Fabric
+        SA
+        LA
+        IA
+        subgraph LH[Lakehouse]
+            Tables[(Tables)]
+            Views[(SQL Views)]
+        end
     end
+    style Fabric fill:#d4edda,stroke:#28a745
 ```
-
-- Python-based orchestrator hosted on Azure AI Foundry
-- Uses Azure AI Agent SDK with function-calling tools bound to each Fabric Data Agent
 - Authenticates to Fabric via MSAL client credentials and calls published agent REST endpoints
 - Supports automatic multi-agent routing and cross-domain synthesis
 - Fully code-driven — customizable routing logic and response formatting
@@ -71,10 +80,16 @@ graph LR
     SG --> LH
     LG --> LH
     IG --> LH
-    subgraph LH[Lakehouse]
-        Tables[(Tables)]
-        Views[(SQL Views)]
+    subgraph Databricks
+        SG
+        LG
+        IG
+        subgraph LH[Lakehouse]
+            Tables[(Tables)]
+            Views[(SQL Views)]
+        end
     end
+    style Databricks fill:#f8d7da,stroke:#dc3545
 ```
 
 - Python-based orchestrator hosted on Azure AI Foundry
