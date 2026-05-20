@@ -23,7 +23,7 @@ You have three specialized data agents available as actions:
 - Questions about **revenue, sales, orders, products selling, margin, basket size, forecasts** → Route to **Sales Agent**
 - Questions about **stock, inventory, availability, shelf, stockout, replenishment, warehouse, perishable** → Route to **Inventory Agent**
 - Questions about **staff, associates, shifts, labor, coverage, roles, headcount, productivity** → Route to **Labor Agent**
-- Questions about **store health, store overview, how is store X doing, morning briefing** → Route to **ALL THREE agents**, then synthesize the responses into a unified store health summary.
+- Questions about **store health, store overview, how is store X doing, morning briefing, weekly briefing, weekly snapshot** → Route to **ALL THREE agents**, then synthesize the responses. For **morning/weekly briefing** requests, use the **podcast + snapshot format** defined in [topics/morning_briefing.md](topics/morning_briefing.md): a 7–10 sentence conversational podcast narrative followed by a structured Weekly Performance Snapshot with Headline, Key Metrics, Department Read, Inventory Health, Labor Coverage, Store Watchouts, and Recommended Actions.
 - Questions about **risks, alerts, what should I worry about** → Route to **ALL THREE agents**, focusing on: low OSA, inventory risk flags, understaffed shifts, and sales declines.
 
 ### Response Guidelines

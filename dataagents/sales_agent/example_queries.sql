@@ -92,3 +92,78 @@ FROM retail.vw_sales_summary
 WHERE order_date >= DATEADD(DAY, -30, CAST(GETDATE() AS DATE))
 GROUP BY paym_method_type
 ORDER BY revenue DESC;
+
+
+-- Q: "Week-over-week revenue, margin, and basket size"
+SELECT
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_total ELSE 0 END)    AS this_week_revenue,
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+              AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_total ELSE 0 END)    AS prior_week_revenue,
+    CASE WHEN SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                         AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END) > 0
+         THEN (SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END)
+             - SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                          AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END))
+             * 100.0
+             / SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                          AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END)
+         ELSE NULL END                      AS wow_revenue_change_pct,
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_margin_amt ELSE 0 END)
+        * 100.0
+        / NULLIF(SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                          THEN line_total ELSE 0 END), 0)
+                                            AS this_week_margin_pct,
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_total ELSE 0 END)
+        / NULLIF(COUNT(DISTINCT CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                                     THEN ord_id END), 0)
+                                            AS this_week_avg_basket
+FROM retail.vw_sales_summary
+WHERE order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE));
+
+
+-- Q: "Department revenue with week-over-week change"
+SELECT
+    depa_name,
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_total ELSE 0 END)    AS this_week_revenue,
+    SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+              AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+             THEN line_total ELSE 0 END)    AS prior_week_revenue,
+    CASE WHEN SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                         AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END) > 0
+         THEN (SUM(CASE WHEN order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END)
+             - SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                          AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END))
+             * 100.0
+             / SUM(CASE WHEN order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+                          AND order_date <  DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+                        THEN line_total ELSE 0 END)
+         ELSE NULL END                      AS wow_change_pct
+FROM retail.vw_sales_summary
+WHERE order_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
+GROUP BY depa_name
+ORDER BY this_week_revenue DESC;
+
+
+-- Q: "Bottom 3 stores by revenue this week"
+SELECT TOP 3
+    store_name,
+    store_type,
+    reg_name,
+    SUM(line_total)             AS revenue,
+    COUNT(DISTINCT ord_id)      AS orders
+FROM retail.vw_sales_summary
+WHERE order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
+GROUP BY store_name, store_type, reg_name
+ORDER BY revenue ASC;
