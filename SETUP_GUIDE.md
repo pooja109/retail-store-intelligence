@@ -5,7 +5,7 @@ Step-by-step instructions to deploy the solution. This repo contains two impleme
 | Option | Orchestrator | Backend Agents | Setup Guide |
 |--------|---|---|---|
 | 1 | Copilot Studio | Fabric Data Agents | This file (Phases 1–4 below) |
-| 2 | Azure AI Foundry | Fabric Data Agents | [foundry_agent/SETUP_GUIDE_FOUNDRY.md](foundry_agent/SETUP_GUIDE_FOUNDRY.md) |
+| 2 | Azure AI Foundry | Fabric Data Agents |This file (Phases 1-2) +  [foundry_agent/SETUP_GUIDE_FOUNDRY.md](foundry_agent/SETUP_GUIDE_FOUNDRY.md) |
 
 > **Option 2** shares Phases 1–2 with Option 1 (Lakehouse views + Fabric Data Agents), then diverges. See its guide for the orchestrator setup.
 
