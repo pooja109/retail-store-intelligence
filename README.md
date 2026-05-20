@@ -2,6 +2,17 @@
 
 Analyzes real-time and historical store data across sales, inventory, and labor to surface actionable insights, risks, and opportunities through conversational AI agents.
 
+
+## Key Features
+
+- **Morning briefing** — automated cross-domain daily summary of sales, inventory, and staffing
+- **Store health check** — unified view of any store's performance across all three domains
+- **Risk surfacing** — proactive detection of stockouts, understaffing, and sales declines
+- **Multi-agent fan-out** — queries are routed to specialized domain agents and synthesized into a single response
+- **2 deployment options** — Copilot Studio (no-code) or Foundry + Fabric (code-driven)
+- **Pre-built SQL views** — five analytical views covering sales summary, inventory health, OSA, OOS classification, and labor coverage
+
+
 ## Implementations
 
 This repo contains two agent orchestration patterns, each covering sales, labor, and inventory:
