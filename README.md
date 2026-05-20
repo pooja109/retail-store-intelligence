@@ -4,13 +4,12 @@ Analyzes real-time and historical store data across sales, inventory, and labor 
 
 ## Implementations
 
-This repo contains three agent orchestration patterns, each covering sales, labor, and inventory:
+This repo contains two agent orchestration patterns, each covering sales, labor, and inventory:
 
 | # | Orchestrator | Backend Agents |
 |---|---|---|
 | 1 | Copilot Studio | Fabric Data Agents |
 | 2 | Azure AI Foundry Agent | Fabric Data Agents |
-| 3 | Azure AI Foundry Agent | Databricks Genie Agents |
 
 ## Architecture
 
@@ -69,35 +68,6 @@ graph LR
 - Supports automatic multi-agent routing and cross-domain synthesis
 - Fully code-driven — customizable routing logic and response formatting
 
-### Option 3: Foundry Agent + Databricks Genie Agents
-
-```mermaid
-graph LR
-    User -->|Natural Language| FA[Foundry Agent Orchestrator]
-    FA --> SG[Sales Genie Agent]
-    FA --> LG[Labor Genie Agent]
-    FA --> IG[Inventory Genie Agent]
-    SG --> LH
-    LG --> LH
-    IG --> LH
-    subgraph Databricks
-        SG
-        LG
-        IG
-        subgraph LH[Lakehouse]
-            Tables[(Tables)]
-            Views[(SQL Views)]
-        end
-    end
-    style Databricks fill:#f8d7da,stroke:#dc3545
-```
-
-- Python-based orchestrator hosted on Azure AI Foundry
-- Calls Databricks Genie Spaces via the Conversation API (start-conversation + polling)
-- Each Genie Space is configured with its own SQL views and table context for text-to-SQL
-- Genie generates and executes SQL autonomously; results are returned as structured tables
-- Async polling with exponential backoff (up to 5-minute timeout per query)
-
 ## Repo Structure
 
 | Folder | Purpose |
@@ -106,7 +76,6 @@ graph LR
 | `dataagents/` | Fabric Data Agents — one per domain (sales, labor, inventory) |
 | `copilot_studio/` | Copilot Studio orchestrator instructions and topics |
 | `foundry_agent/` | Azure AI Foundry orchestrator agent |
-| `databricks_genie/` | Databricks Genie agents + Foundry orchestrator for Genie backend |
 
 ## Getting Started
 

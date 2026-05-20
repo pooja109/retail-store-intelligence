@@ -1,14 +1,13 @@
 # Store Intelligence — Setup Guide
 
-Step-by-step instructions to deploy the solution. This repo contains three implementation options:
+Step-by-step instructions to deploy the solution. This repo contains two implementation options:
 
 | Option | Orchestrator | Backend Agents | Setup Guide |
 |--------|---|---|---|
 | 1 | Copilot Studio | Fabric Data Agents | This file (Phases 1–4 below) |
 | 2 | Azure AI Foundry | Fabric Data Agents | [foundry_agent/SETUP_GUIDE_FOUNDRY.md](foundry_agent/SETUP_GUIDE_FOUNDRY.md) |
-| 3 | Azure AI Foundry | Databricks Genie Agents | [databricks_genie/SETUP_GUIDE_DATABRICKS.md](databricks_genie/SETUP_GUIDE_DATABRICKS.md) |
 
-> **Options 2 & 3** share Phases 1–2 with Option 1 (Lakehouse views + Fabric Data Agents), then diverge. See their respective guides for the orchestrator setup.
+> **Option 2** shares Phases 1–2 with Option 1 (Lakehouse views + Fabric Data Agents), then diverges. See its guide for the orchestrator setup.
 
 ---
 
@@ -214,11 +213,6 @@ retail-store-intelligence/
 │   ├── config.py
 │   ├── requirements.txt
 │   └── SETUP_GUIDE_FOUNDRY.md
-├── databricks_genie/                   # Option 3 — Foundry + Databricks Genie
-│   ├── foundry_agent/
-│   ├── genie_spaces/
-│   ├── sql/views/
-│   └── SETUP_GUIDE_DATABRICKS.md
 ├── SETUP_GUIDE.md                      # This file
 └── README.md
 ```
