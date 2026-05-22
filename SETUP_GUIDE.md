@@ -32,11 +32,7 @@ Run each SQL file in the **Fabric SQL analytics endpoint** for `lh_retaildata`.
 |---|------|-------------|
 | 1 | [`sql/views/vw_sales_summary.sql`](sql/views/vw_sales_summary.sql) | `retail.vw_sales_summary` |
 | 2 | [`sql/views/vw_inventory_health.sql`](sql/views/vw_inventory_health.sql) | `retail.vw_inventory_health` |
-| 3 | [`sql/views/vw_osa_daily.sql`](sql/views/vw_osa_daily.sql) | `retail.vw_osa_daily` |
-| 4 | [`sql/views/vw_labor_coverage.sql`](sql/views/vw_labor_coverage.sql) | `retail.vw_labor_coverage` |
-| 5 | [`sql/views/vw_oos_classification.sql`](sql/views/vw_oos_classification.sql) | `retail.vw_oos_classification` |
-
-> **Note:** `vw_oos_classification` depends on `vw_osa_daily` and `vw_sales_summary`, so run it last.
+| 3 | [`sql/views/vw_labor_coverage.sql`](sql/views/vw_labor_coverage.sql) | `retail.vw_labor_coverage` |
 
 4. Verify each view by running `SELECT TOP 10 * FROM retail.<view_name>`
 
@@ -62,8 +58,8 @@ In the agent configuration:
 | Agent | Tables & Views to Add |
 |-------|----------------------|
 | **Sales Agent** | `vw_sales_summary`, `orders`, `order_lines`, `products`, `product_categories`, `regions`, `forecasts`, `stores` |
-| **Inventory Agent** | `vw_inventory_health`, `vw_osa_daily`, `vw_oos_classification`, `inventories`, `products`, `product_categories`, `warehouses`, `demand_signals`, `visual_osa_daily`, `stores`, `regions` |
-| **Labor Agent** | `vw_labor_coverage`, `associate_assignments`, `stores`, `regions` |
+| **Inventory Agent** | `vw_inventory_health`, `inventories`, `products`, `product_categories`, `warehouses`, `demand_signals`, `stores`, `regions` |
+| **Labor Agent** | `vw_labor_coverage`, `stores`, `regions` |
 
 ### 2.3 Add Instructions
 
@@ -188,9 +184,7 @@ retail-store-intelligence/
 ├── sql/views/                          # Phase 1 — Lakehouse SQL views
 │   ├── vw_sales_summary.sql
 │   ├── vw_inventory_health.sql
-│   ├── vw_osa_daily.sql
-│   ├── vw_labor_coverage.sql
-│   └── vw_oos_classification.sql
+│   └── vw_labor_coverage.sql
 ├── dataagents/                         # Phase 2 — Fabric Data Agent configs
 │   ├── sales_agent/
 │   │   ├── instructions.md

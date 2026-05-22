@@ -158,12 +158,12 @@ ORDER BY this_week_revenue DESC;
 
 -- Q: "Bottom 3 stores by revenue this week"
 SELECT TOP 3
-    store_name,
-    store_type,
+    str_name,
+    str_type,
     reg_name,
     SUM(line_total)             AS revenue,
     COUNT(DISTINCT ord_id)      AS orders
 FROM retail.vw_sales_summary
 WHERE order_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
-GROUP BY store_name, store_type, reg_name
+GROUP BY str_name, str_type, reg_name
 ORDER BY revenue ASC;

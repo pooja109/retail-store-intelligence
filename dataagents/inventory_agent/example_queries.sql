@@ -33,45 +33,6 @@ WHERE is_perishable = 1
 ORDER BY days_over DESC;
 
 
--- Q: "On-shelf availability rate by store this week"
-SELECT
-    store_name,
-    reg_name,
-    COUNT(*)                                           AS total_scans,
-    SUM(CAST(on_shelf_flag AS INT))                    AS on_shelf_count,
-    SUM(CAST(on_shelf_flag AS INT)) * 100.0 / COUNT(*) AS osa_rate_pct
-FROM retail.vw_osa_daily
-WHERE osa_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
-GROUP BY store_name, reg_name
-ORDER BY osa_rate_pct ASC;
-
-
--- Q: "Which products are most often off-shelf?"
-SELECT TOP 10
-    prod_name,
-    cat_name,
-    COUNT(*)                                           AS total_scans,
-    SUM(CASE WHEN on_shelf_flag = 0 THEN 1 ELSE 0 END) AS off_shelf_count,
-    SUM(CASE WHEN on_shelf_flag = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
-                                                        AS off_shelf_pct
-FROM retail.vw_osa_daily
-WHERE osa_date >= DATEADD(DAY, -14, CAST(GETDATE() AS DATE))
-GROUP BY prod_name, cat_name
-ORDER BY off_shelf_pct DESC;
-
-
--- Q: "On-shelf availability trend for dairy in Region 5"
-SELECT
-    osa_date,
-    COUNT(*)                                           AS scans,
-    SUM(CAST(on_shelf_flag AS INT)) * 100.0 / COUNT(*) AS osa_rate_pct
-FROM retail.vw_osa_daily
-WHERE depa_name = 'Dairy'
-  AND osa_date >= DATEADD(DAY, -30, CAST(GETDATE() AS DATE))
-GROUP BY osa_date
-ORDER BY osa_date;
-
-
 -- Q: "Inventory overview for the Northwest warehouse"
 SELECT
     prod_name,
@@ -87,137 +48,166 @@ WHERE wh_name LIKE '%Northwest%'
 ORDER BY risk_flag DESC, prod_name;
 
 
--- Q: "Which stores have the lowest on-shelf availability?"
-SELECT TOP 5
-    store_name,
-    store_type,
+-- Q: "Products with the longest lead times"
+SELECT TOP 10
+    prod_name,
+    brand_name,
+    cat_name,
+    wh_name,
     reg_name,
-    SUM(CAST(on_shelf_flag AS INT)) * 100.0 / COUNT(*) AS osa_rate_pct
-FROM retail.vw_osa_daily
-WHERE osa_date >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE))
-GROUP BY store_name, store_type, reg_name
-ORDER BY osa_rate_pct ASC;
-
-
--- ============================================================
--- OOS Classification Queries
--- ============================================================
-
--- Q: "Show me all out-of-stock products"
-SELECT
-    oos_classification,
-    COUNT(*)  AS product_count
-FROM retail.vw_oos_classification
-WHERE oos_classification <> 'OK'
-GROUP BY oos_classification
-ORDER BY product_count DESC;
-
-
--- Q: "Which products are truly out of stock?"
-SELECT
-    store_name,
-    prod_name,
-    cat_name,
-    brand_name,
-    last_scan_date,
-    units_sold_7d,
-    days_off_shelf_14d,
-    oos_classification
-FROM retail.vw_oos_classification
-WHERE oos_classification = 'TRUE_OOS'
-ORDER BY store_name, prod_name;
-
-
--- Q: "Show me phantom out-of-stocks — where system says we have stock but shelf is empty"
-SELECT
-    store_name,
-    prod_name,
-    cat_name,
-    brand_name,
-    last_scan_date,
-    units_sold_7d,
-    revenue_7d,
-    has_warehouse_inventory,
-    safety_stock_qty,
-    oos_classification
-FROM retail.vw_oos_classification
-WHERE oos_classification = 'PHANTOM_OOS'
-ORDER BY revenue_7d DESC;
-
-
--- Q: "Which products are at risk of going out of stock?"
-SELECT
-    store_name,
-    prod_name,
-    cat_name,
-    units_sold_7d,
-    orders_7d,
-    revenue_7d,
-    safety_stock_qty,
-    reorder_point_qty,
     lead_time_days,
-    oos_classification
-FROM retail.vw_oos_classification
-WHERE oos_classification = 'AT_RISK_OOS'
-ORDER BY units_sold_7d DESC;
+    safety_stock_qty,
+    reorder_point_qty
+FROM retail.vw_inventory_health
+ORDER BY lead_time_days DESC;
 
 
--- Q: "Show me chronic out-of-stock problems"
+-- Q: "Inventory risk summary by region"
 SELECT
-    store_name,
-    prod_name,
-    cat_name,
-    depa_name,
-    days_scanned_14d,
-    days_off_shelf_14d,
-    off_shelf_pct_14d,
-    units_sold_7d,
-    oos_classification
-FROM retail.vw_oos_classification
-WHERE oos_classification = 'CHRONIC_OOS'
-ORDER BY off_shelf_pct_14d DESC;
-
-
--- Q: "OOS summary by store — which stores have the most issues?"
-SELECT
-    store_name,
     reg_name,
-    COUNT(CASE WHEN oos_classification = 'TRUE_OOS'    THEN 1 END) AS true_oos,
-    COUNT(CASE WHEN oos_classification = 'PHANTOM_OOS' THEN 1 END) AS phantom_oos,
-    COUNT(CASE WHEN oos_classification = 'AT_RISK_OOS' THEN 1 END) AS at_risk,
-    COUNT(CASE WHEN oos_classification = 'CHRONIC_OOS' THEN 1 END) AS chronic_oos,
-    COUNT(CASE WHEN oos_classification <> 'OK'         THEN 1 END) AS total_issues
+    risk_flag,
+    COUNT(*) AS product_count
+FROM retail.vw_inventory_health
+GROUP BY reg_name, risk_flag
+ORDER BY reg_name, risk_flag;
+
+
+-- Q: "Discontinued products still in inventory"
+SELECT
+    prod_name,
+    brand_name,
+    cat_name,
+    wh_name,
+    reg_name,
+    safety_stock_qty
+FROM retail.vw_inventory_health
+WHERE risk_flag = 'DISCONTINUED'
+ORDER BY reg_name, wh_name;
+
+
+-- Q: "Which warehouses carry the most at-risk products?"
+SELECT
+    wh_name,
+    reg_name,
+    COUNT(*) AS risk_products,
+    COUNT(CASE WHEN risk_flag = 'PERISHABLE_LEAD_TIME_RISK' THEN 1 END) AS perishable_risk,
+    COUNT(CASE WHEN risk_flag = 'DISCONTINUED' THEN 1 END) AS discontinued
+FROM retail.vw_inventory_health
+WHERE risk_flag <> 'OK'
+GROUP BY wh_name, reg_name
+ORDER BY risk_products DESC;
+
+
+-- ============================================================
+-- Out-of-Stock Classification Queries  (vw_oos_classification)
+-- ============================================================
+
+-- Q: "How many products are out of stock?"
+SELECT
+    oos_category,
+    oos_severity,
+    COUNT(*)                AS product_count,
+    COUNT(DISTINCT prod_id) AS distinct_products
 FROM retail.vw_oos_classification
-GROUP BY store_name, reg_name
-HAVING COUNT(CASE WHEN oos_classification <> 'OK' THEN 1 END) > 0
-ORDER BY total_issues DESC;
+WHERE oos_category <> 'OK'
+GROUP BY oos_category, oos_severity
+ORDER BY
+    CASE oos_severity
+        WHEN 'CRITICAL'   THEN 1
+        WHEN 'WARNING'    THEN 2
+        WHEN 'MONITORING' THEN 3
+    END;
 
 
--- Q: "OOS breakdown by category — which departments are worst?"
+-- Q: "Show me all critical out-of-stock products"
+SELECT
+    prod_name,
+    brand_name,
+    cat_name,
+    wh_name,
+    reg_name,
+    oos_category,
+    days_since_last_sale,
+    avg_daily_units_14d,
+    total_units_14d,
+    last_sale_date
+FROM retail.vw_oos_classification
+WHERE oos_category IN ('CHRONIC_OOS', 'LIKELY_OOS')
+ORDER BY days_since_last_sale DESC, avg_daily_units_30d DESC;
+
+
+-- Q: "Which regions have the most out-of-stock products?"
+SELECT
+    reg_name,
+    oos_category,
+    COUNT(*)                AS product_count,
+    COUNT(DISTINCT prod_id) AS distinct_products
+FROM retail.vw_oos_classification
+WHERE oos_category IN ('CHRONIC_OOS', 'LIKELY_OOS', 'AT_RISK')
+GROUP BY reg_name, oos_category
+ORDER BY reg_name,
+    CASE oos_category
+        WHEN 'CHRONIC_OOS' THEN 1
+        WHEN 'LIKELY_OOS'  THEN 2
+        WHEN 'AT_RISK'     THEN 3
+    END;
+
+
+-- Q: "Products at risk of running out before replenishment"
+SELECT
+    prod_name,
+    brand_name,
+    cat_name,
+    wh_name,
+    reg_name,
+    safety_stock_qty,
+    lead_time_days,
+    avg_daily_units_14d,
+    ROUND(est_days_of_coverage, 1) AS est_days_of_coverage,
+    lead_time_days - ROUND(est_days_of_coverage, 0) AS coverage_gap_days
+FROM retail.vw_oos_classification
+WHERE oos_category = 'AT_RISK'
+ORDER BY est_days_of_coverage ASC;
+
+
+-- Q: "Which products are slowing down?"
+SELECT
+    prod_name,
+    brand_name,
+    cat_name,
+    wh_name,
+    reg_name,
+    avg_daily_units_14d,
+    avg_daily_units_7d,
+    ROUND(velocity_change_pct * 100, 1) AS velocity_change_pct
+FROM retail.vw_oos_classification
+WHERE oos_category = 'SLOW_MOVING'
+ORDER BY velocity_change_pct ASC;
+
+
+-- Q: "OOS summary by department"
+SELECT
+    depa_name,
+    COUNT(CASE WHEN oos_category = 'CHRONIC_OOS' THEN 1 END)  AS chronic_oos,
+    COUNT(CASE WHEN oos_category = 'LIKELY_OOS'  THEN 1 END)  AS likely_oos,
+    COUNT(CASE WHEN oos_category = 'AT_RISK'     THEN 1 END)  AS at_risk,
+    COUNT(CASE WHEN oos_category = 'SLOW_MOVING' THEN 1 END)  AS slow_moving,
+    COUNT(CASE WHEN oos_category = 'OK'          THEN 1 END)  AS ok,
+    COUNT(*)                                                    AS total
+FROM retail.vw_oos_classification
+WHERE is_discontinued = 0
+GROUP BY depa_name
+ORDER BY chronic_oos + likely_oos DESC;
+
+
+-- Q: "Perishable products by department"
 SELECT
     depa_name,
     cat_name,
-    COUNT(CASE WHEN oos_classification = 'TRUE_OOS'    THEN 1 END) AS true_oos,
-    COUNT(CASE WHEN oos_classification = 'PHANTOM_OOS' THEN 1 END) AS phantom_oos,
-    COUNT(CASE WHEN oos_classification = 'AT_RISK_OOS' THEN 1 END) AS at_risk,
-    COUNT(CASE WHEN oos_classification = 'CHRONIC_OOS' THEN 1 END) AS chronic_oos,
-    COUNT(CASE WHEN oos_classification <> 'OK'         THEN 1 END) AS total_issues
-FROM retail.vw_oos_classification
+    COUNT(*)                      AS product_count,
+    AVG(CAST(lead_time_days AS FLOAT))  AS avg_lead_time,
+    AVG(CAST(shelf_life_days AS FLOAT)) AS avg_shelf_life
+FROM retail.vw_inventory_health
+WHERE is_perishable = 1
 GROUP BY depa_name, cat_name
-HAVING COUNT(CASE WHEN oos_classification <> 'OK' THEN 1 END) > 0
-ORDER BY total_issues DESC;
-
-
--- Q: "Identify chronic out-of-stocks for perishable products"
-SELECT
-    store_name,
-    prod_name,
-    cat_name,
-    days_off_shelf_14d,
-    off_shelf_pct_14d,
-    lead_time_days,
-    oos_classification
-FROM retail.vw_oos_classification
-WHERE oos_classification = 'CHRONIC_OOS'
-  AND is_perishable = 1
-ORDER BY off_shelf_pct_14d DESC;
+ORDER BY avg_lead_time DESC;

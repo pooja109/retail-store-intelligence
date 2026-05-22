@@ -118,8 +118,8 @@ Foundry Prompt Agent (GPT-4o)
   ├─▶│ Sales Agent   │──▶ Fabric Lakehouse (vw_sales_summary)
   │  └──────────────┘
   │  ┌──────────────┐
-  ├─▶│ Inventory    │──▶ Fabric Lakehouse (vw_inventory_health,
-  │  │ Agent        │    vw_osa_daily, vw_oos_classification)
+  ├─▶│ Inventory    │──▶ Fabric Lakehouse (vw_inventory_health)
+  │  │ Agent        │
   │  └──────────────┘
   │  ┌──────────────┐
   └─▶│ Labor Agent  │──▶ Fabric Lakehouse (vw_labor_coverage)

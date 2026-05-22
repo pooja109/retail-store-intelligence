@@ -10,9 +10,9 @@ SELECT
     CAST(o.ord_dt AS DATE)                          AS order_date,
 
     -- Store
-    s.str_id                                        AS store_id,
-    s.str_name                                      AS store_name,
-    s.str_type                                      AS store_type,
+    s.str_id,
+    s.str_name,
+    s.str_type,
 
     -- Region
     r.reg_id,
@@ -48,8 +48,9 @@ SELECT
 
 FROM      retail.orders           o
 JOIN      retail.order_lines      ol  ON ol.ord_id    = o.ord_id
+JOIN      retail.order_fulfillment ofl on ofl.ord_id   = o.ord_id
 JOIN      retail.products         p   ON p.prod_id    = ol.prod_id
 JOIN      retail.product_categories pc ON pc.prod_cat_id = p.prod_cat_id
-JOIN      retail.stores           s   ON s.str_id     = o.str_id
+JOIN      retail.stores           s   ON s.str_id     = ofl.fulfill_str_id
 JOIN      retail.regions          r   ON r.reg_id     = o.reg_id;
 GO
