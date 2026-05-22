@@ -1,4 +1,94 @@
 -- ============================================================
+-- Store-Level Inventory Queries  (vw_store_inventory_health)
+-- ============================================================
+
+-- Q: "What products are out of stock at store 5?"
+SELECT
+    prod_name,
+    brand_name,
+    cat_name,
+    depa_name,
+    risk_flag,
+    on_order_qty,
+    last_received_dt,
+    days_since_last_sale
+FROM retail.vw_store_inventory_health
+WHERE str_id = '5'
+  AND risk_flag LIKE 'OUT_OF_STOCK%'
+ORDER BY days_since_last_sale DESC;
+
+
+-- Q: "Store inventory health summary"
+SELECT
+    str_name,
+    risk_flag,
+    COUNT(*)                AS product_count,
+    SUM(on_hand_qty)        AS total_on_hand,
+    SUM(shrinkage_qty)      AS total_shrinkage
+FROM retail.vw_store_inventory_health
+WHERE snapshot_dt = (SELECT MAX(snapshot_dt) FROM retail.store_inventory)
+GROUP BY str_name, risk_flag
+ORDER BY str_name, risk_flag;
+
+
+-- Q: "Which stores have the most out-of-stock products?"
+SELECT
+    str_name,
+    str_type,
+    reg_name,
+    COUNT(*) AS oos_products
+FROM retail.vw_store_inventory_health
+WHERE risk_flag IN ('OUT_OF_STOCK', 'OUT_OF_STOCK_REORDER_PENDING')
+  AND snapshot_dt = (SELECT MAX(snapshot_dt) FROM retail.store_inventory)
+GROUP BY str_name, str_type, reg_name
+ORDER BY oos_products DESC;
+
+
+-- Q: "Show shrinkage by store and department"
+SELECT
+    str_name,
+    depa_name,
+    SUM(shrinkage_qty)                          AS total_shrinkage,
+    SUM(shrinkage_qty * unit_cost_amt)          AS shrinkage_cost
+FROM retail.vw_store_inventory_health
+WHERE shrinkage_qty > 0
+GROUP BY str_name, depa_name
+ORDER BY shrinkage_cost DESC;
+
+
+-- Q: "Products below safety stock at store 12"
+SELECT
+    prod_name,
+    brand_name,
+    on_hand_qty,
+    safety_stock_qty,
+    reorder_point_qty,
+    on_order_qty,
+    lead_time_days,
+    risk_flag
+FROM retail.vw_store_inventory_health
+WHERE str_id = '12'
+  AND risk_flag IN ('BELOW_SAFETY_STOCK', 'BELOW_REORDER_POINT')
+ORDER BY on_hand_qty ASC;
+
+
+-- Q: "Perishable products at risk in the Northeast region"
+SELECT
+    str_name,
+    prod_name,
+    cat_name,
+    on_hand_qty,
+    shelf_life_days,
+    lead_time_days,
+    days_since_restock
+FROM retail.vw_store_inventory_health
+WHERE reg_name = 'Northeast'
+  AND is_perishable = 1
+  AND risk_flag = 'PERISHABLE_LEAD_TIME_RISK'
+ORDER BY days_since_restock DESC;
+
+
+-- ============================================================
 -- Inventory Agent — Example Queries
 -- ============================================================
 
