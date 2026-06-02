@@ -9,6 +9,7 @@ Analyzes real-time and historical store data across sales, inventory, and labor 
 - **Store health check** — unified view of any store's performance across all three domains
 - **Risk surfacing** — proactive detection of stockouts, understaffing, and sales declines
 - **Multi-agent fan-out** — queries are routed to specialized domain agents and synthesized into a single response
+- **Weekly regional manager briefing** — podcast-style narrative + structured weekly performance snapshot, generated per region and persisted to OneLake
 - **2 deployment options** — Copilot Studio (no-code) or Foundry + Fabric (code-driven)
 - **Pre-built SQL views** — five analytical views covering sales summary, inventory health, OSA, OOS classification, and labor coverage
 
@@ -78,6 +79,40 @@ graph LR
 - Authenticates to Fabric via MSAL client credentials and calls published agent REST endpoints
 - Supports automatic multi-agent routing and cross-domain synthesis
 - Fully code-driven — customizable routing logic and response formatting
+
+### Weekly Regional Manager Briefing
+
+```mermaid
+graph LR
+    Pipeline[Fabric Data Pipeline<br/>weekly, per region] -->|reg_id| NB[regional_manager_briefing.ipynb]
+    NB --> SA[Sales Data Agent]
+    NB --> IA[Inventory Data Agent]
+    NB --> LA[Labor Data Agent]
+    SA --> LH[(Lakehouse)]
+    IA --> LH
+    LA --> LH
+    NB -->|synthesis call| SA
+    NB -->|briefing_REG_YYYY-MM-DD.md| OL[(OneLake<br/>RegionalManagerBriefing/)]
+    style Pipeline fill:#fff3cd,stroke:#856404
+    style OL fill:#d1ecf1,stroke:#0c5460
+```
+
+Delivered by [`recommendations/regional_manager_briefing.ipynb`](recommendations/regional_manager_briefing.ipynb), which produces a two-part weekly markdown briefing for a single region:
+
+- **Part 1 — Weekly Podcast** — a 7–10 sentence conversational narrative, as if a colleague is verbally briefing the regional manager. Covers the week's hook, sales WoW, department trends, OSA / OOS posture, staffing risks, cross-domain connections, and what to watch next week.
+- **Part 2 — Weekly Performance Snapshot** — structured markdown sections:
+  - **Key Metrics & Department Read** (Sales agent) — revenue, orders, margin, top/bottom departments
+  - **Inventory Health** (Inventory agent) — TRUE_OOS / CHRONIC_OOS / PHANTOM_OOS / AT_RISK_OOS counts, OSA vs prior week, lowest-OSA stores
+  - **Labor Coverage** (Labor agent) — headcount, understaffed stores, single-associate shifts, productivity
+
+How it works:
+
+1. Resolves the region from `retail.regions` in the lakehouse.
+2. Fans out one prompt each to the Sales, Inventory, and Labor Fabric Data Agents (via the `fabric-data-agent-sdk`) for region-scoped sections.
+3. Re-calls the Sales agent with the three section outputs as context to synthesize the Weekly Podcast narrative — no Azure OpenAI dependency.
+4. Assembles the final markdown and writes `briefing_<reg_id>_<week_ending>.md` to OneLake under `RegionalManagerBriefing/`.
+
+**Scheduling:** orchestrate via a Fabric Data Pipeline that fans out per region (one notebook activity per `reg_id`) on a weekly cadence.
 
 ## Repo Structure
 
