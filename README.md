@@ -87,6 +87,7 @@ graph LR
 | `dataagents/` | Fabric Data Agents — one per domain (sales, labor, inventory) |
 | `copilot_studio/` | Copilot Studio orchestrator instructions and topics |
 | `foundry_agent/` | Azure AI Foundry orchestrator agent |
+| `recommendations/regional_manager_briefing.ipynb` | Fabric notebook — weekly podcast-style briefing per region, written to OneLake `RegionalManagerBriefing/` |
 
 ## Getting Started
 
