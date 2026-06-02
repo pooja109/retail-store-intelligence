@@ -80,7 +80,19 @@ graph LR
 - Supports automatic multi-agent routing and cross-domain synthesis
 - Fully code-driven — customizable routing logic and response formatting
 
-### Weekly Regional Manager Briefing
+## Recommendations
+
+Two notebook-driven recommendation flows complement the conversational agents — one daily and per-store, one weekly and per-region.
+
+### Daily Store Recommendations — [`recommendations/agent_driven_recommendations.ipynb`](recommendations/agent_driven_recommendations.ipynb)
+
+Generates holistic, dollar-quantified, SKU-level recommendations for a single store by fanning out to the Sales, Labor, and Inventory Fabric Data Agents via the `fabric-data-agent-sdk`. Each agent returns structured JSON (risks, opportunities, KPIs, top-2 SKUs); results are merged and persisted to `retail.recommendations`, which is consumed by the Recommendation Data Agent.
+
+- **Inputs:** `store_id`, `report_date`, `lookback_days`
+- **Output:** rows in `retail.recommendations` (idempotent on `(str_id, report_date)`)
+- **Scheduling:** daily Fabric Data Pipeline, one notebook activity per store
+
+### Weekly Regional Manager Briefing — [`recommendations/regional_manager_briefing.ipynb`](recommendations/regional_manager_briefing.ipynb)
 
 ```mermaid
 graph LR
@@ -97,7 +109,7 @@ graph LR
     style OL fill:#d1ecf1,stroke:#0c5460
 ```
 
-Delivered by [`recommendations/regional_manager_briefing.ipynb`](recommendations/regional_manager_briefing.ipynb), which produces a two-part weekly markdown briefing for a single region:
+Produces a two-part weekly markdown briefing for a single region:
 
 - **Part 1 — Weekly Podcast** — a 7–10 sentence conversational narrative, as if a colleague is verbally briefing the regional manager. Covers the week's hook, sales WoW, department trends, OSA / OOS posture, staffing risks, cross-domain connections, and what to watch next week.
 - **Part 2 — Weekly Performance Snapshot** — structured markdown sections:
@@ -122,6 +134,7 @@ How it works:
 | `dataagents/` | Fabric Data Agents — one per domain (sales, labor, inventory) |
 | `copilot_studio/` | Copilot Studio orchestrator instructions and topics |
 | `foundry_agent/` | Azure AI Foundry orchestrator agent |
+| `recommendations/agent_driven_recommendations.ipynb` | Fabric notebook — daily SKU-level store recommendations, written to `retail.recommendations` |
 | `recommendations/regional_manager_briefing.ipynb` | Fabric notebook — weekly podcast-style briefing per region, written to OneLake `RegionalManagerBriefing/` |
 
 ## Getting Started
