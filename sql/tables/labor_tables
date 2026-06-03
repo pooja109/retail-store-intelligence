@@ -1,0 +1,64 @@
+CREATE TABLE [retail].[employees] (
+    [emp_id] bigint NULL,
+    [first_name] varchar(8000) NULL,
+    [last_name] varchar(8000) NULL,
+    [hire_date] date NULL,
+    [termination_date] date NULL,
+    [status] varchar(8000) NULL,
+    [emp_type] varchar(8000) NULL,
+    [primary_role_id] int NULL,
+    [home_store_id] varchar(8000) NULL,
+    [phone] varchar(8000) NULL,
+    [email] varchar(8000) NULL
+);
+CREATE TABLE [retail].[roles] (
+    [role_id] int NULL,
+    [role_name] varchar(8000) NULL,
+    [role_level] varchar(8000) NULL,
+    [min_headcount_per_shift] int NULL
+);
+CREATE TABLE [retail].[schedules] (
+    [schedule_id] bigint NULL,
+    [emp_id] bigint NULL,
+    [str_id] varchar(8000) NULL,
+    [role_id] int NULL,
+    [shift_date] date NULL,
+    [shift_start] varchar(8000) NULL,
+    [shift_end] varchar(8000) NULL,
+    [scheduled_hours] decimal(5,2) NULL
+);
+CREATE TABLE [retail].[store_staffing_targets] (
+    [str_id] varchar(8000) NULL,
+    [role_id] int NULL,
+    [shift] varchar(8000) NULL,
+    [target_headcount] int NULL,
+    [effective_date] date NULL,
+    [end_date] date NULL
+);
+CREATE TABLE [retail].[task_assignments] (
+    [task_id] bigint NULL,
+    [emp_id] bigint NULL,
+    [str_id] varchar(8000) NULL,
+    [shift_date] date NULL,
+    [task_type] varchar(8000) NULL,
+    [units_completed] int NULL,
+    [orders_managed] int NULL
+);
+CREATE TABLE [retail].[time_attendance] (
+    [attendance_id] bigint NULL,
+    [emp_id] bigint NULL,
+    [str_id] varchar(8000) NULL,
+    [clock_in] datetime2 NULL,
+    [clock_out] datetime2 NULL,
+    [actual_hours] decimal(5,2) NULL,
+    [is_overtime] bit NULL,
+    [absence_reason] varchar(8000) NULL
+);
+CREATE TABLE [retail].[wage_rates] (
+    [wage_rate_id] bigint NULL,
+    [emp_id] bigint NULL,
+    [role_id] int NULL,
+    [hourly_rate] decimal(8,2) NULL,
+    [effective_date] date NULL,
+    [end_date] date NULL
+);
