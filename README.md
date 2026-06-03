@@ -76,7 +76,7 @@ graph LR
     end
     style Fabric fill:#d4edda,stroke:#28a745
 ```
-- Authenticates to Fabric via MSAL client credentials and calls published agent REST endpoints
+- Authenticates to Fabric via MSAL client credentials (service principal) and calls the published Fabric Data Agent endpoints using the OpenAI Assistants-compatible API (threads/runs/messages)
 - Supports automatic multi-agent routing and cross-domain synthesis
 - Fully code-driven — customizable routing logic and response formatting
 

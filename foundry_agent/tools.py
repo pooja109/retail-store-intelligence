@@ -1,8 +1,21 @@
-"""Tool functions that call published Fabric Data Agents via REST API."""
+"""Tool functions that call published Fabric Data Agents via the
+OpenAI Assistants-compatible API.
 
-import json
-import requests
+Fabric Data Agents expose an Assistants-API-compatible endpoint at the
+published URL (base URL ends in `/aiassistant/openai`). We use the OpenAI
+SDK with a custom auth header carrying a Fabric bearer token obtained via
+service-principal client credentials.
+"""
+
+import time
+import typing as t
+import uuid
+
 import msal
+from openai import OpenAI
+from openai._models import FinalRequestOptions
+from openai._types import Omit
+from openai._utils import is_given
 
 from config import (
     FABRIC_TENANT_ID,
@@ -22,32 +35,94 @@ _msal_app = msal.ConfidentialClientApplication(
     client_credential=FABRIC_CLIENT_SECRET,
 )
 
+_TERMINAL_STATES = {"completed", "failed", "cancelled", "expired", "requires_action"}
+_POLL_INTERVAL_SEC = 2
+_POLL_TIMEOUT_SEC = 300
+
 
 def _get_fabric_token() -> str:
     """Acquire an access token for Fabric API using client credentials."""
     result = _msal_app.acquire_token_for_client(scopes=_SCOPES)
     if "access_token" not in result:
-        raise RuntimeError(f"Failed to acquire Fabric token: {result.get('error_description', result)}")
+        raise RuntimeError(
+            f"Failed to acquire Fabric token: {result.get('error_description', result)}"
+        )
     return result["access_token"]
+
+
+class _FabricOpenAI(OpenAI):
+    """OpenAI client that injects a fresh Fabric bearer token per request and
+    pins the Fabric Assistants API version."""
+
+    def __init__(self, base_url: str, api_version: str = "2024-05-01-preview") -> None:
+        self._api_version = api_version
+        super().__init__(
+            api_key="not-used",
+            base_url=base_url,
+            default_query={"api-version": api_version},
+        )
+
+    def _prepare_options(self, options: FinalRequestOptions) -> None:
+        headers: dict[str, t.Any] = (
+            {**options.headers} if is_given(options.headers) else {}
+        )
+        headers["Authorization"] = f"Bearer {_get_fabric_token()}"
+        headers.setdefault("Accept", "application/json")
+        headers.setdefault("ActivityId", str(uuid.uuid4()))
+        options.headers = headers
+        return super()._prepare_options(options)
+
+
+def _extract_assistant_text(messages) -> str:
+    """Return the latest assistant message text from a thread message list."""
+    for msg in reversed(messages.data):
+        if msg.role == "assistant" and msg.content:
+            parts = []
+            for c in msg.content:
+                if getattr(c, "type", None) == "text":
+                    parts.append(c.text.value)
+            if parts:
+                return "\n".join(parts)
+    return "(No assistant response)"
 
 
 def _call_fabric_agent(endpoint: str, question: str) -> str:
     """Send a question to a published Fabric Data Agent and return the response."""
-    token = _get_fabric_token()
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    payload = {"messages": [{"role": "user", "content": question}]}
-    resp = requests.post(endpoint, headers=headers, json=payload, timeout=120)
-    resp.raise_for_status()
-    data = resp.json()
-    # Extract the assistant reply from the response
-    if "choices" in data:
-        return data["choices"][0]["message"]["content"]
-    if "result" in data:
-        return data["result"]
-    return json.dumps(data)
+    client = _FabricOpenAI(base_url=endpoint)
+
+    assistant = client.beta.assistants.create(model="not-used")
+    thread = client.beta.threads.create()
+    try:
+        client.beta.threads.messages.create(
+            thread_id=thread.id, role="user", content=question
+        )
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id, assistant_id=assistant.id
+        )
+
+        start = time.time()
+        while run.status not in _TERMINAL_STATES:
+            if time.time() - start > _POLL_TIMEOUT_SEC:
+                raise TimeoutError(
+                    f"Fabric agent run timed out after {_POLL_TIMEOUT_SEC}s "
+                    f"(last status={run.status})"
+                )
+            time.sleep(_POLL_INTERVAL_SEC)
+            run = client.beta.threads.runs.retrieve(
+                thread_id=thread.id, run_id=run.id
+            )
+
+        if run.status != "completed":
+            err = getattr(run, "last_error", None)
+            return f"Fabric agent run ended with status={run.status}, error={err}"
+
+        messages = client.beta.threads.messages.list(thread_id=thread.id, order="asc")
+        return _extract_assistant_text(messages)
+    finally:
+        try:
+            client.beta.threads.delete(thread_id=thread.id)
+        except Exception:
+            pass
 
 
 def query_sales_agent(question: str) -> str:

@@ -38,9 +38,17 @@ For each of the three Fabric Data Agents (Sales, Inventory, Labor):
 
 1. Open the agent in Microsoft Fabric
 2. Click **Publish** (if not already published)
-3. Copy the published endpoint URL
+3. Open **Settings** → copy the **Published URL**
 
-> **Note:** The exact endpoint format depends on Fabric's agent API. Update the URLs in `.env` once you have them.
+The published URL has the form:
+
+```
+https://api.fabric.microsoft.com/v1/workspaces/<workspace-id>/dataagents/<agent-id>/aiassistant/openai
+```
+
+This is an **OpenAI Assistants-compatible** endpoint (not a plain chat completions URL).
+`tools.py` consumes it via the `openai` SDK using the threads/runs/messages pattern,
+with a Fabric bearer token injected in the `Authorization` header.
 
 ## Phase 4: Configure Service Principal
 

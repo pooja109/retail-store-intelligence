@@ -4,7 +4,7 @@ Orchestrates three Fabric Data Agents (Sales, Inventory, Labor) to answer
 retail store intelligence questions.
 """
 
-from azure.ai.projects import AIProjectClient
+from azure.ai.agents import AgentsClient
 from azure.ai.agents.models import FunctionTool, ToolSet
 from azure.identity import DefaultAzureCredential
 
@@ -70,16 +70,17 @@ _tool_functions = {
 
 def create_agent():
     """Create the Foundry Prompt Agent with tool bindings."""
-    client = AIProjectClient(
+    client = AgentsClient(
         endpoint=PROJECT_ENDPOINT,
         credential=DefaultAzureCredential(),
     )
 
-    functions = FunctionTool(functions=list(_tool_functions.values()))
+    functions = FunctionTool(functions=set(_tool_functions.values()))
     toolset = ToolSet()
     toolset.add(functions)
+    client.enable_auto_function_calls(toolset)
 
-    agent = client.agents.create_agent(
+    agent = client.create_agent(
         model=MODEL_DEPLOYMENT_NAME,
         name="store-intelligence-assistant",
         instructions=SYSTEM_PROMPT,
@@ -89,17 +90,17 @@ def create_agent():
     return client, agent
 
 
-def chat(client: AIProjectClient, agent, user_message: str) -> str:
+def chat(client: AgentsClient, agent, user_message: str) -> str:
     """Send a message and return the agent response, handling tool calls."""
-    thread = client.agents.threads.create()
-    client.agents.messages.create(thread_id=thread.id, role="user", content=user_message)
+    thread = client.threads.create()
+    client.messages.create(thread_id=thread.id, role="user", content=user_message)
 
-    run = client.agents.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
+    run = client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
 
     if run.status == "failed":
         return f"Run failed: {run.last_error}"
 
-    messages = client.agents.messages.list(thread_id=thread.id)
+    messages = client.messages.list(thread_id=thread.id)
     # Return the last assistant message
     for msg in reversed(list(messages)):
         if msg.role == "assistant" and msg.content:
@@ -121,7 +122,7 @@ def main():
             response = chat(client, agent, user_input)
             print(f"\nAssistant: {response}\n")
     finally:
-        client.agents.delete_agent(agent.id)
+        client.delete_agent(agent.id)
         print("Agent deleted.")
 
 
