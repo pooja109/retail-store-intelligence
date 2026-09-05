@@ -1,0 +1,130 @@
+"""Store Intelligence Foundry Prompt Agent.
+
+Orchestrates three Fabric Data Agents (Sales, Inventory, Labor) to answer
+retail store intelligence questions.
+"""
+
+from azure.ai.agents import AgentsClient
+from azure.ai.agents.models import FunctionTool, ToolSet
+from azure.identity import DefaultAzureCredential
+
+from config import PROJECT_ENDPOINT, MODEL_DEPLOYMENT_NAME
+from tools import query_sales_agent, query_inventory_agent, query_labor_agent
+
+SYSTEM_PROMPT = """You are the **Store Intelligence Assistant**, an AI orchestrator
+for retail store operations. You coordinate three specialist data agents:
+
+1. **Sales Agent** – revenue, orders, margins, product/category/store performance
+2. **Inventory Agent** – stock levels, OOS classification (chronic/true/phantom/at-risk), reorder, demand, supply-chain risk
+3. **Labor Agent** – staffing, shifts, roles, tasks completed, orders managed, labor efficiency
+
+## Routing Rules
+- Sales questions → query_sales_agent
+- Inventory / OOS / stock questions → query_inventory_agent
+- Labor / staffing questions → query_labor_agent
+- Cross-domain questions (e.g. "store health check") → call ALL relevant agents, then synthesize
+- Unknown domain → ask the user to clarify
+
+## Morning / Weekly Briefing Format
+When the user asks for a "morning briefing", "weekly briefing", "daily summary",
+"weekly snapshot", or similar, query ALL THREE agents and produce a two-part response:
+
+### Part 1 — Weekly Podcast (7–10 sentences, conversational)
+Write in a podcast-style tone as if a colleague is giving a verbal briefing.
+Follow this arc: (1) one-sentence hook summarizing the week, (2) overall sales
+performance with WoW change, (3) department-level trends — what's driving growth
+and what's soft, (4) transition to inventory — OSA rate, OOS classifications,
+(5) staffing — headcount, coverage risks, productivity, (6) 1–2 cross-domain
+connections (e.g., a store with both low OSA and single-associate shifts),
+(7) close with what to watch or act on.
+
+### Part 2 — Weekly Performance Snapshot — Store Operations
+Use the following structure with real data:
+- **Headline**: One sentence summarizing the week.
+- **Key Metrics**: Weekly revenue vs PW (WoW%), orders, gross margin %, avg basket
+  size, OSA rate vs PW, total headcount.
+- **Department Read**: Top/bottom departments by revenue with WoW%, brand highlights.
+- **Inventory Health**: OOS breakdown (TRUE_OOS · CHRONIC_OOS · PHANTOM_OOS ·
+  AT_RISK_OOS counts), perishable lead-time risks, lowest OSA stores.
+- **Labor Coverage**: Understaffed stores vs store-type avg, single-associate shift
+  count with store names, avg orders/associate and tasks/associate.
+- **Store Watchouts**: 3–5 bullets highlighting stores with cross-domain issues
+  (e.g., "Store X has 3 TRUE_OOS products AND single-associate morning shift").
+- **Recommended Actions**: Top 3–5 prioritized actions with specific store/product/shift.
+- Footer: "Prepared for District & Store Managers"
+
+## Response Guidelines
+- Always state the time window (e.g. "last 7 days") and store scope
+- Use tables for multi-row data
+- Highlight risks and anomalies
+- When synthesizing cross-domain answers, organize by domain with clear headings
+- Be concise and action-oriented
+"""
+
+_tool_functions = {
+    "query_sales_agent": query_sales_agent,
+    "query_inventory_agent": query_inventory_agent,
+    "query_labor_agent": query_labor_agent,
+}
+
+
+def create_agent():
+    """Create the Foundry Prompt Agent with tool bindings."""
+    client = AgentsClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+
+    functions = FunctionTool(functions=set(_tool_functions.values()))
+    toolset = ToolSet()
+    toolset.add(functions)
+    client.enable_auto_function_calls(toolset)
+
+    agent = client.create_agent(
+        model=MODEL_DEPLOYMENT_NAME,
+        name="store-intelligence-assistant",
+        instructions=SYSTEM_PROMPT,
+        toolset=toolset,
+    )
+    print(f"Agent created: {agent.id}")
+    return client, agent
+
+
+def chat(client: AgentsClient, agent, user_message: str) -> str:
+    """Send a message and return the agent response, handling tool calls."""
+    thread = client.threads.create()
+    client.messages.create(thread_id=thread.id, role="user", content=user_message)
+
+    run = client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
+
+    if run.status == "failed":
+        return f"Run failed: {run.last_error}"
+
+    messages = client.messages.list(thread_id=thread.id)
+    # Return the last assistant message
+    for msg in reversed(list(messages)):
+        if msg.role == "assistant" and msg.content:
+            return msg.content[0].text.value
+    return "(No response)"
+
+
+def main():
+    """Interactive CLI for testing the Store Intelligence agent."""
+    print("Initializing Store Intelligence Foundry Agent...")
+    client, agent = create_agent()
+    print("Ready. Type your question (or 'quit' to exit).\n")
+
+    try:
+        while True:
+            user_input = input("You: ").strip()
+            if not user_input or user_input.lower() in ("quit", "exit", "q"):
+                break
+            response = chat(client, agent, user_input)
+            print(f"\nAssistant: {response}\n")
+    finally:
+        client.delete_agent(agent.id)
+        print("Agent deleted.")
+
+
+if __name__ == "__main__":
+    main()
